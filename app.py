@@ -66,7 +66,6 @@ def logout():
 
 @app.route('/login/webauthn', methods=['get'])
 def generate_webauthn_auth():
-    print("start generate auth")
     username = flask.request.args.get('username')
     user = User.query.filter_by(username=username).first()
     if not user:
@@ -79,10 +78,8 @@ def generate_webauthn_auth():
 
 @app.route('/login/webauthn/verify', methods=['POST'])
 def login_webauthn_verify():
-    print("start verify auth")
     username = flask.request.args.get('username')
     credential = flask.request.get_data()
-    # print(credential)
     user = User.query.filter_by(username=username).first()
     if username is None:
         return flask.jsonify({"error": "No username provided"})
@@ -92,18 +89,18 @@ def login_webauthn_verify():
         return flask.jsonify({"error": "No user found"})
     if user.credentials is None:
         return flask.jsonify({"error": "No credentials found"})
+    if user.auth_challenge is None:
+        return flask.jsonify({"error": "No challenge found"})
+
     try:
-        # print(credential)
         credential = AuthenticationCredential.parse_raw(credential)
-        # print(credential)
         authentication_verification = webauthn.verify_authentication_response(credential=credential, expected_challenge=user.auth_challenge, expected_rp_id=RP_ID,
                                                                               expected_origin=ORIGIN, credential_public_key=user.credentials[0]["public_key"], credential_current_sign_count=user.credentials[0]["sign_count"])
-        # print(authentication_verification)
-        # print("aaa")
         flask.session['username'] = username
+        user.auth_challenge = None
+        db.session.commit()
         return flask.jsonify({"verified": True, "data": json.loads(options_to_json(authentication_verification))})
     except Exception as e:
-        print(e)
         return flask.jsonify({"error": str(e)})
 
 @app.route('/register', methods=['GET', 'POST'])
