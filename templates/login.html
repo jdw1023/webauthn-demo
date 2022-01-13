@@ -1,0 +1,88 @@
+<html>
+
+<head>
+	<title>Login</title>
+	<link rel="stylesheet" href="./styles.css">
+	<script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.es5.umd.min.js"></script>
+	<link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+</head>
+
+<body>
+	<h1>Login</h1>
+	<form method="POST" id="login_form">
+		<input type="text" name="username" placeholder="Username"><br>
+		<input type="password" name="password" placeholder="Password" id="password"><br>
+		<button type="submit" id="login">Login</button><br>
+		<a onclick="toggleWebAuthnLogin()" id="WebAuthnToggle">Toggle WebAuthn/Password</a><br>
+	</form>
+	{% if error %}
+	<p>{{ error }}</p>
+	{% endif %}
+	<p>
+		<a href="/">Menu</a>
+	</p>
+	
+	<script>
+		const { browserSupportsWebauthn, startAuthentication } = SimpleWebAuthnBrowser;
+
+		if (!browserSupportsWebauthn()) {
+			document.querySelector('#WebAuthnToggle').style.display = 'none';
+		} else {
+			console.log("Asd");
+			document.getElementById('login_form').onsubmit = async () => {
+				if(document.querySelector('#password').style.display != 'none'){
+					this.submit();
+					return false;
+				}
+				event.preventDefault();
+				const resp = await fetch('/login/webauthn?username='+document.querySelector('#login_form input[name=username]').value);
+
+				let asseResp;
+				try {
+					const opts = await resp.json();
+					console.log('Authentication Options', opts);
+					asseResp = await startAuthentication(opts);
+					console.log('Authentication Response', asseResp);
+				} catch (error) {
+					console.log(error);
+					alert(error);
+					return false;
+					//throw new Error(error);
+				}
+
+				const verificationResp = await fetch('/login/webauthn/verify?username='+document.querySelector('#login_form input[name=username]').value, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify(asseResp),
+				});
+
+				const verificationJSON = await verificationResp.json();
+				console.log('Server Response', verificationJSON);
+
+				if (verificationJSON && verificationJSON.verified) {
+					alert(`User authenticated!`);
+				} else {
+					alert(`Oh no, something went wrong! Response: ${JSON.stringify(
+						verificationJSON,
+					)}`);
+				}
+				window.location.href = '/';
+				return false;
+			};
+		}
+
+		function toggleWebAuthnLogin() {
+			if (document.querySelector('#password').style.display == 'none') {
+				document.querySelector('#password').removeAttribute('style');
+			} else {
+				document.querySelector('#password').style.display = 'none';
+			}
+			// return false;
+		}
+
+	</script>
+</body>
+
+</html>

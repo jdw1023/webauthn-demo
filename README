@@ -1,0 +1,4 @@
+docker build -t webauthn-demo .
+docker run -dp 5000:5000 webauthn-demo
+Navigate to http://localhost:5000
+
