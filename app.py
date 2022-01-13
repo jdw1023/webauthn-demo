@@ -155,10 +155,8 @@ def register_webauthn_verify():
     if username is None:
         return flask.jsonify({'verified': False, 'msg': 'Not logged in', 'status': 400})
     if cred is None:
-        return flask.jsonify({'verified': False, 'msg': 'Not logged in', 'status': 400})
+        return flask.jsonify({'verified': False, 'msg': 'No credential provided', 'status': 400})
     user = db.session.query(User).filter_by(username=username).first()
-    if cred is None:
-        return flask.jsonify({'verified': False, 'msg': 'Not logged in', 'status': 400})
     try:
         credential = RegistrationCredential.parse_raw(cred)
         verification = webauthn.verify_registration_response(
